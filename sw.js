@@ -1,5 +1,5 @@
 /* Tête libre: works offline, picks up new versions when online */
-const VERSION = 'tl-1.4.0';
+const VERSION = 'tl-1.5.0';
 const FONTS = 'tl-fonts';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png'];
 

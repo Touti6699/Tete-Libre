@@ -673,7 +673,7 @@ function renderToday(){
   h+='<div class="summary">'+
     (n?n+' chose'+(n>1?'s':'')+' à faire aujourd\'hui'+(late?' dont <em>'+late+' en retard</em>':''):'Rien d\'obligatoire aujourd\'hui')+'</div>';
   h+=n?'<ul class="card">'+tt.map(t=>taskRow(t,{showList:true})).join('')+rl.map(relRow).join('')+'</ul>'
-      :'<div class="empty">'+(S.tasks.length?'Journée libre. Si tu veux avancer, pioche une idée juste en dessous.':'Rien pour l\'instant. Appuie sur + pour noter ce qui te passe par la tête.')+'</div>';
+      :'';
   const sg=suggestions();
   if(sg.length){
     const off=sg.length>3?ui.sugOffset%sg.length:0;
@@ -719,7 +719,6 @@ function renderWeek(){
         :'<li><button class="mline mrow" type="button" '+(l.id?'data-act="openMoney" data-id="'+l.id+'"':'data-act="go" data-v="argent"')+'><span class="k">'+l.ic+'<span>'+esc(l.txt)+'</span></span><span class="amt '+(l.cls||'')+'">'+l.amt+'</span></button></li>').join('')+
       '</ul></section>';
   }
-  if(!any)h+='<div class="empty">Semaine calme. Rien de daté pour les 7 prochains jours.</div>';
   const lb=S.settings.lastBackup?diff(S.settings.lastBackup,T):null;
   if((S.tasks.length+S.money.length)>=8&&(lb===null||lb>30))h+='<div class="banner"><span>Pas de sauvegarde '+(lb===null?'pour l\'instant':'depuis '+lb+' jours')+'.</span><button type="button" data-act="openSettings">Sauvegarder</button></div>';
   const waitN=S.tasks.filter(t=>t.status==='waiting').length;
@@ -746,7 +745,7 @@ function renderTasks(){
   const showList=f==='all';
   const groups=[['late','En retard'],['today',"Aujourd'hui"],['week',weekLabel()],['later','Plus tard']].map(g=>({k:g[0],name:g[1],items:todo.filter(t=>bucket(t)===g[0])})).filter(g=>g.items.length);
   if(!todo.length&&!waiting.length){
-    h+='<div class="empty">'+(f==='inbox'?'Rien à trier. Propre.':'Rien ici pour l\'instant. Appuie sur + pour ajouter quelque chose.')+'</div>';
+    h+='';
   }else if(groups.length===1&&!waiting.length&&groups[0].k==='later'){
     h+='<ul class="card">'+groups[0].items.map(t=>taskRow(t,{showList})).join('')+'</ul>';
   }else{
@@ -766,7 +765,7 @@ function renderMoney(){
   const r=reste(),T=tISO();
   let h='';
   h+='<div class="paycard"><span class="lbl">Reste à payer d\'ici ta paie</span><span class="big">'+euro(r.total)+'</span><span class="sub">Paie '+esc(relPrep(r.P))+' · dans '+r.days+' jour'+(r.days>1?'s':'')+'</span>'+
-    (r.items.length?'<ul>'+r.items.map(i=>'<li><span>'+esc(cap(relShort(i.date)))+' · '+esc(i.label)+(i.late?' <span class="lt">(en retard)</span>':'')+'</span><span class="amt">'+euro(i.amount)+'</span></li>').join('')+'</ul>':'<ul><li><span>Plus rien à payer avant ta paie.</span><span></span></li></ul>')+'</div>';
+    (r.items.length?'<ul>'+r.items.map(i=>'<li><span>'+esc(cap(relShort(i.date)))+' · '+esc(i.label)+(i.late?' <span class="lt">(en retard)</span>':'')+'</span><span class="amt">'+euro(i.amount)+'</span></li>').join('')+'</ul>':'')+'</div>';
   const ins=S.money.filter(m=>m.kind==='in'&&!m.done).sort((a,b)=>(a.followUp||'9')<(b.followUp||'9')?-1:1);
   const outs=S.money.filter(m=>m.kind==='out'&&!m.done).sort((a,b)=>(a.date||'9')<(b.date||'9')?-1:1);
   const subs=S.money.filter(m=>m.kind==='sub').map(m=>({m,n:nextSub(m)})).sort((a,b)=>(a.n||'9')<(b.n||'9')?-1:1);
@@ -777,12 +776,12 @@ function renderMoney(){
   h+=sec('À recevoir',null,ins.length?'<ul class="card">'+ins.map(m=>{
       const due=m.followUp&&m.followUp<=T;
       return moneyLi(m,'<button class="mrow" type="button" data-act="openMoney" data-id="'+m.id+'"><span class="l"><b>'+esc(m.who?m.who+' · ':'')+esc(m.label)+'</b><small>'+(m.followUp?(due?'<span class="m-late">Relancer '+(m.followUp<T?'(en retard)':'aujourd\'hui')+'</span>':'Relance '+esc(relPrep(m.followUp))):'Pas de relance prévue')+'</small></span><span class="amt in">'+euro(m.amount)+'</span></button>');
-    }).join('')+'</ul><p class="hint">Total attendu : '+euro(sum(ins))+'</p>':'<div class="empty">Personne ne te doit rien. Pour l\'instant.</div>',addBtn('in'));
-  h+=sec('Dépenses prévues',null,outs.length?'<ul class="card">'+outs.map(m=>moneyLi(m,'<button class="mrow" type="button" data-act="openMoney" data-id="'+m.id+'"><span class="l"><b>'+esc(m.label)+'</b><small class="'+(m.date<T?'m-late':'')+'">'+(m.date?esc(cap(relShort(m.date))):'Sans date')+'</small></span><span class="amt">'+euro(m.amount)+'</span></button>')).join('')+'</ul>':'<div class="empty">Aucune dépense prévue.</div>',addBtn('out'));
-  h+=sec('Abonnements et prélèvements',null,subs.length?'<ul class="card">'+subs.map(o=>{const m=o.m;
+    }).join('')+'</ul><p class="hint">Total attendu : '+euro(sum(ins))+'</p>':'',addBtn('in'));
+  h+=sec('Dépenses prévues',null,outs.length?'<ul class="card">'+outs.map(m=>moneyLi(m,'<button class="mrow" type="button" data-act="openMoney" data-id="'+m.id+'"><span class="l"><b>'+esc(m.label)+'</b><small class="'+(m.date<T?'m-late':'')+'">'+(m.date?esc(cap(relShort(m.date))):'Sans date')+'</small></span><span class="amt">'+euro(m.amount)+'</span></button>')).join('')+'</ul>':'',addBtn('out'));
+  h+=sec('Prélèvements',null,subs.length?'<ul class="card">'+subs.map(o=>{const m=o.m;
       const when=m.freq==='year'?'Chaque année':'Chaque mois';
       return '<li class="mli"><span class="auto" aria-hidden="true">'+ICON.repeat+'</span><button class="mrow" type="button" data-act="openMoney" data-id="'+m.id+'"><span class="l"><b>'+esc(m.label)+'</b><small>'+when+(o.n?' · prochain '+esc(relShort(o.n)):'')+' · prélevé tout seul</small></span><span class="amt">'+euro(m.amount)+'</span></button></li>';
-    }).join('')+'</ul><p class="hint">Environ '+euro(monthly)+' par mois au total.</p>':'<div class="empty">Ajoute tes abonnements pour voir ce qui part chaque mois.</div>',addBtn('sub'));
+    }).join('')+'</ul><p class="hint">Environ '+euro(monthly)+' par mois au total.</p>':'',addBtn('sub'));
   const from=addDays(T,-30);
   const settled=S.money.filter(m=>(m.kind==='in'||m.kind==='out')&&m.done&&(m.doneAt||'')>=from).sort((a,b)=>(a.doneAt||'')<(b.doneAt||'')?1:-1);
   if(settled.length)h+='<section class="sec"><button class="done-tg" type="button" data-act="toggleSettled" aria-expanded="'+!!ui.showSettled+'">Réglé récemment ('+settled.length+') '+ICON.chev+'</button>'+
@@ -848,7 +847,7 @@ function addSheet(){
   h+='<div class="fld"><span class="lab">Dans quelle liste ?</span><div class="opts">'+S.lists.map(l=>opt('aSet','list',l.id,l.name,listSel===l.id,'<i class="dot" style="background:'+l.color+'"></i>')).join('')+'</div></div>';
   h+='<div class="fld"><span class="lab">Quand ?</span><div class="opts">'+opt('aSet','when','later','Plus tard',a.when==='later')+opt('aSet','when','today',"Aujourd'hui",a.when==='today')+opt('aSet','when','week',weekLabel(),a.when==='week')+opt('aSet','when','date','Choisir une date',a.when==='date')+'</div>'+
     (a.when==='date'?'<label for="a-date" class="sr">Date</label><input type="date" id="a-date" value="'+esc(a.date||addDays(tISO(),1))+'">':'')+
-    ((a.when==='today'||a.when==='date')?'<div class="two"><div class="fld"><label for="a-start">Heure de début</label><input type="time" id="a-start" value="'+esc(a.start||'')+'"></div><div class="fld"><label for="a-end">Heure de fin</label><input type="time" id="a-end" value="'+esc(a.end||'')+'"></div></div><p class="note">Facultatif. Une seule heure : à cette heure-là. Début et fin : ça dure.</p>':'')+
+    ((a.when==='today'||a.when==='date')?'<div class="two"><div class="fld"><label for="a-start">Heure de début</label><input type="time" id="a-start" value="'+esc(a.start||'')+'"></div><div class="fld"><label for="a-end">Heure de fin</label><input type="time" id="a-end" value="'+esc(a.end||'')+'"></div></div>':'')+
     (a.err?'<p class="err" role="alert">'+esc(a.err)+'</p>':'')+'</div>';
   h+='<button class="btn" type="button" data-act="aAdd">'+ICON.plus+'Ajouter</button>';
   if(a.last){
@@ -858,7 +857,7 @@ function addSheet(){
         gcBig(t)+'</div>';
     }
   }else{
-    h+='<p class="note">Pressé ? Écris et valide : sans choix, la tâche part dans « À trier ».</p>';
+
   }
   return h;
 }
@@ -924,7 +923,7 @@ function moneyFields(isNew){
   const d=ui.draft;
   let h='';
   if(isNew){
-    h+='<div class="fld"><span class="lab">C\'est quoi ?</span><div class="opts">'+opt('mSet','kind','in','On me doit de l\'argent',d.kind==='in')+opt('mSet','kind','out','Dépense prévue',d.kind==='out')+opt('mSet','kind','sub','Abonnement ou prélèvement',d.kind==='sub')+'</div></div>';
+    h+='<div class="fld"><span class="lab">C\'est quoi ?</span><div class="opts">'+opt('mSet','kind','in','Remboursement',d.kind==='in')+opt('mSet','kind','out','Dépense prévue',d.kind==='out')+opt('mSet','kind','sub','Prélèvement',d.kind==='sub')+'</div></div>';
   }
   const ph={in:'Ex. place de concert',out:'Ex. cadeau, réparation…',sub:'Ex. forfait mobile'}[d.kind];
   h+='<div class="two"><div class="fld"><label for="m-label">'+(d.kind==='in'?'Pour quoi ?':'Quoi ?')+'</label><input type="text" id="m-label" data-m="label" value="'+esc(d.label)+'" placeholder="'+esc(ph)+'" autocomplete="off"></div>'+
@@ -998,7 +997,7 @@ function settingsSheet(){
     '<details><summary class="note" style="cursor:pointer">Restaurer depuis un texte copié (par exemple depuis l\'aperçu dans Claude)</summary>'+
     '<label for="bk-in" class="sr">Coller une sauvegarde</label><textarea id="bk-in" rows="3" placeholder="Colle ici la sauvegarde copiée"></textarea>'+
     '<button class="btn ghost" type="button" data-act="bkRestore">Restaurer ce texte</button></details><p class="note" id="bk-msg" hidden></p></div>';
-  h+='<hr class="sep"><div class="btns"><button class="btn danger" type="button" data-act="wipe" data-confirm="Sûr ? Appuie encore pour tout effacer">'+ICON.trash+'Tout effacer</button></div><p class="note">Tête libre · version 1.4</p>';
+  h+='<hr class="sep"><div class="btns"><button class="btn danger" type="button" data-act="wipe" data-confirm="Sûr ? Appuie encore pour tout effacer">'+ICON.trash+'Tout effacer</button></div><p class="note">Tête libre · version 1.5</p>';
   return h;
 }
 
