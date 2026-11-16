@@ -36,6 +36,7 @@
   --ok:#1B7B50;
   --ok-soft:#E2F2E9;
   --late-on-ink:#FFD27A;
+  --on-ok:#FFF1DC;
   --p-high:#D62839;
   --p-med:#C27C00;
   --p-low:#2F6FD6;
@@ -48,14 +49,14 @@
   :root:not([data-theme="light"]){
     --bg:#151012; --surface:#211A1C; --ink:#FFF1DC; --muted:#B9ABA7; --line:#372B2E; --on-ink:#151012;
     --accent:#A8283F; --accent-text:#F29AA7; --accent-ink:#FFF1DC; --accent-soft:#3D1F26; --pay-bg:#7A1626;
-    --late:#FF9566; --late-soft:#3A2218; --wait:#F2B651; --wait-soft:#382B14; --ok:#5DD39B; --ok-soft:#163224; --late-on-ink:#FFD27A; --p-high:#FF5C6C; --p-med:#F2B13A; --p-low:#6EA2FF;
+    --late:#FF9566; --late-soft:#3A2218; --wait:#F2B651; --wait-soft:#382B14; --ok:#5DD39B; --ok-soft:#163224; --late-on-ink:#FFD27A; --on-ok:#0F2A1C; --p-high:#FF5C6C; --p-med:#F2B13A; --p-low:#6EA2FF;
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#151012; --surface:#211A1C; --ink:#FFF1DC; --muted:#B9ABA7; --line:#372B2E; --on-ink:#151012;
   --accent:#A8283F; --accent-text:#F29AA7; --accent-ink:#FFF1DC; --accent-soft:#3D1F26; --pay-bg:#7A1626;
-  --late:#FF9566; --late-soft:#3A2218; --wait:#F2B651; --wait-soft:#382B14; --ok:#5DD39B; --ok-soft:#163224; --late-on-ink:#FFD27A; --p-high:#FF5C6C; --p-med:#F2B13A; --p-low:#6EA2FF;
+  --late:#FF9566; --late-soft:#3A2218; --wait:#F2B651; --wait-soft:#382B14; --ok:#5DD39B; --ok-soft:#163224; --late-on-ink:#FFD27A; --on-ok:#0F2A1C; --p-high:#FF5C6C; --p-med:#F2B13A; --p-low:#6EA2FF;
   color-scheme:dark;
 }
 
@@ -104,6 +105,11 @@ main > *{flex-shrink:0}
 .bd-badge.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .bd-badge.on small{color:var(--accent-ink);opacity:.85}
 .m-acc{color:var(--accent-text);font-weight:700}
+.sq-chk{width:46px;height:50px;border:0;background:transparent;display:grid;place-items:center;padding:0}
+.sq-chk .sq{width:24px;height:24px;border-radius:7px;border:2.5px solid var(--ok);display:grid;place-items:center;transition:background .18s}
+.sq-chk .sq svg{width:15px;height:15px;stroke-width:3;opacity:0;color:var(--on-ok)}
+.checking .sq-chk .sq{background:var(--ok)}
+.checking .sq-chk .sq svg{opacity:1}
 
 .seg{display:inline-flex;background:var(--line);border-radius:12px;padding:3px;gap:2px;align-self:flex-start}
 .seg button{border:0;background:transparent;border-radius:9px;padding:8px 16px;font-weight:700;font-size:15px;color:var(--muted);min-height:38px}
@@ -248,7 +254,7 @@ button.stat{cursor:pointer}
 
 /* Tabs + FAB */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
-.tabs-in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.tabs-in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
 .tab{border:0;background:transparent;height:62px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12.5px;font-weight:700;color:var(--muted)}
 .tab[aria-current="page"]{color:var(--accent-text)}
 .tab[aria-current="page"] svg{stroke-width:2.3}
@@ -343,6 +349,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
   <div class="tabs-in">
     <button class="tab" type="button" data-view="aujourdhui" id="tab-today"></button>
     <button class="tab" type="button" data-view="taches" id="tab-tasks"></button>
+    <button class="tab" type="button" data-view="menage" id="tab-chores"></button>
     <button class="tab" type="button" data-view="argent" id="tab-money"></button>
     <button class="tab" type="button" data-view="anniversaires" id="tab-bdays"></button>
   </div>
@@ -373,6 +380,7 @@ const ICON={
   hourglass:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/></svg>',
   card:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg>',
   arrowIn:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  house:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-5h4v5"/></svg>',
   cake:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21h16M5 21v-7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7M5 16.2c1.5 1.1 3 1.1 4.5 0s3-1.1 4.5 0 3 1.1 5 0M12 12V8.6M12 6.4c-1-.7-1-1.9 0-3.2 1 1.3 1 2.5 0 3.2z"/></svg>',
   chevR:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
   bulb:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2v.5h5V16c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>',
@@ -548,12 +556,12 @@ function sample(){
     m({kind:'sub',label:'Forfait mobile',amount:9.99,day:3,freq:'month'}),
     m({kind:'sub',label:'Abonnement presse',amount:89,day:12,month:3,freq:'year'})
   ];
-  const birthdays=sampleBirthdays();
+  const birthdays=sampleBirthdays(),chores=sampleChores();
   const doneLog=[{d:addDays(T,-1),t:'Rendre le colis au point relais'},{d:addDays(T,-3),t:'Prendre RDV chez le coiffeur'},{d:addDays(T,-4),t:'Arroser les plantes'}];
-  return {v:1,lists,tasks,money,birthdays,doneLog,settings:{payDay:28,weekendAdjust:true,amTime:'08:00',sunTime:'18:00',remTime:'09:00'},sample:true};
+  return {v:1,lists,tasks,money,birthdays,chores,doneLog,settings:{payDay:28,weekendAdjust:true,amTime:'08:00',sunTime:'18:00',remTime:'09:00'},sample:true};
 }
 function blank(){
-  const b=sample();b.tasks=[];b.money=[];b.birthdays=[];b.doneLog=[];b.sample=false;return b;
+  const b=sample();b.tasks=[];b.money=[];b.birthdays=[];b.chores=[];b.doneLog=[];b.sample=false;return b;
 }
 function sampleBirthdays(){
   const T=tISO(),y=today().getFullYear();
@@ -561,7 +569,11 @@ function sampleBirthdays(){
   return [at(0,'Paul',30),at(3,'Maman',null),at(6,'Léa',27),at(41,'Julien',35),at(120,'Camille',null)];
 }
 const DEMO_PRIO={'Répondre au mail du propriétaire':'high',"Résilier l'abonnement salle de sport":'med',"Envoyer l'attestation employeur à la CAF":'high','Arroser les plantes':'low','Rendez-vous chez le dentiste':'med','Ranger les papiers dans le classeur':'low'};
-function norm(d){d.doneLog=d.doneLog||[];
+function sampleChores(){
+  const T=tISO(),c=(name,every,k,last)=>({id:uid(),name,every,next:addDays(T,k),last:last==null?null:addDays(T,last)});
+  return [c('Sortir les poubelles',2,-1,-3),c("Passer l'aspirateur",7,0,-7),c('Changer les draps',14,3,-11),c('Nettoyer la salle de bain',10,6,-4),c('Détartrer la bouilloire',30,20,-10)];
+}
+function norm(d){d.doneLog=d.doneLog||[];d.chores=Array.isArray(d.chores)?d.chores:(PREVIEW?sampleChores():[]);
   if(PREVIEW&&!d.tasks.some(t=>'prio' in t))d.tasks.forEach(t=>{t.prio=DEMO_PRIO[t.title]||null;});d.birthdays=Array.isArray(d.birthdays)?d.birthdays:(PREVIEW?sampleBirthdays():[]);return d;}
 const IDB={db:null,
   open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('tetelibre',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{IDB.db=r.result;res();};r.onerror=()=>rej(r.error);}catch(e){rej(e);}});},
@@ -669,7 +681,7 @@ function logDone(title){S.doneLog=S.doneLog||[];S.doneLog.push({d:tISO(),t:title
 const doneLast7=()=>{const from=addDays(tISO(),-6);return (S.doneLog||[]).filter(x=>x.d>=from).length;};
 
 /* ---------- UI state ---------- */
-const VIEWS={aujourdhui:'today',taches:'tasks',argent:'money',anniversaires:'birthdays'};
+const VIEWS={aujourdhui:'today',taches:'tasks',menage:'chores',argent:'money',anniversaires:'birthdays'};
 const ui={view:'today',filter:'all',showSettled:false,showSug:false,openSteps:new Set(),showDone:false,sugOffset:0,sheet:null,
   add:{kind:'task',title:'',list:null,when:'later',date:'',last:null},draft:null,mErr:''};
 
@@ -789,6 +801,56 @@ function saveBday(){
   save();return true;
 }
 
+/* ---------- Household chores ---------- */
+const everyLabel=n=>{n=Number(n);return n===1?'Tous les jours':n===7?'Toutes les semaines':n===14?'Toutes les 2 semaines':'Tous les '+n+' jours';};
+const byNext=(a,b)=>a.next<b.next?-1:a.next>b.next?1:String(a.name).localeCompare(String(b.name),'fr');
+function choresDue(){const T=tISO();return (S.chores||[]).filter(c=>c.next<=T).sort(byNext);}
+function choreRow(c,o){
+  o=o||{};const T=tISO(),n=diff(T,c.next),meta=[];
+  if(n<0)meta.push('<span class="m-late">En retard de '+(-n)+' jour'+(-n>1?'s':'')+'</span>');
+  else if(!o.hideWhen)meta.push(n===0?'<span class="m-acc">Aujourd\'hui</span>':'<span>'+(n===1?'Demain':'Dans '+n+' jours')+'</span>');
+  meta.push('<span>'+ICON.repeat+' '+everyLabel(c.every)+'</span>');
+  if(o.showKind)meta.push('<span class="lst">'+ICON.house+' Ménage</span>');
+  return '<li class="row" data-row="'+c.id+'"><button class="sq-chk" type="button" data-act="choreDone" data-id="'+c.id+'" aria-label="Fait : '+esc(c.name)+'"><span class="sq">'+ICON.check+'</span></button>'+
+    '<div class="row-main" data-act="openChore" data-id="'+c.id+'" role="button" tabindex="0"><div class="t-title">'+esc(c.name)+'</div><div class="t-meta">'+meta.join('')+'</div></div><div></div></li>';
+}
+function renderChores(){
+  const T=tISO(),all=(S.chores||[]).slice().sort(byNext);
+  if(!all.length)return '';
+  const g=[['À faire',all.filter(c=>c.next<=T)],['Dans les 7 prochains jours',all.filter(c=>c.next>T&&diff(T,c.next)<=7)],['Plus tard',all.filter(c=>diff(T,c.next)>7)]].filter(x=>x[1].length);
+  const late=all.filter(c=>c.next<T).length;
+  return g.map(x=>sec(x[0],x[0]==='À faire'&&late?'<span class="late">'+x[1].length+'</span>':x[1].length,'<ul class="card">'+x[1].map(c=>choreRow(c)).join('')+'</ul>')).join('');
+}
+function openChoreSheet(id){
+  ui.cErr='';
+  const c=id?S.chores.find(x=>x.id===id):null;
+  ui.ch=c?{id:c.id,name:c.name,every:c.every,next:c.next,last:c.last}:{id:null,name:'',every:7,next:tISO(),last:null};
+  openSheet({type:'chore'});
+  if(!c)setTimeout(()=>{const i=$('#c-name');if(i)i.focus();},80);
+}
+function choreSheet(){
+  const d=ui.ch,isNew=!d.id;
+  let h='<div class="fld"><label for="c-name">Tâche ménagère</label><input type="text" id="c-name" data-c="name" value="'+esc(d.name)+'" placeholder="Ex. Passer l\'aspirateur" autocomplete="off"></div>';
+  h+='<div class="fld"><label for="c-every">Tous les combien de jours ?</label><input type="number" id="c-every" data-c="every" min="1" max="365" inputmode="numeric" value="'+esc(d.every)+'">'+
+    '<div class="opts">'+[[1,'Tous les jours'],[2,'2 jours'],[3,'3 jours'],[7,'1 semaine'],[14,'2 semaines'],[30,'30 jours']].map(x=>opt('cSet','every',x[0],x[1],Number(d.every)===x[0])).join('')+'</div></div>';
+  h+='<div class="fld"><label for="c-next">'+(isNew?'À faire à partir du':'Prochaine fois')+'</label><input type="date" id="c-next" data-c="next" value="'+esc(d.next||'')+'"></div>';
+  if(!isNew&&d.last)h+='<p class="hint">Faite pour la dernière fois '+esc(relPrep(d.last))+'.</p>';
+  if(ui.cErr)h+='<p class="err" role="alert">'+esc(ui.cErr)+'</p>';
+  h+='<button class="btn" type="button" data-act="cSave">'+(isNew?ICON.plus+'Ajouter':ICON.check+'Enregistrer')+'</button>';
+  if(!isNew)h+='<div class="btns"><button class="btn danger" type="button" data-act="cDel" data-id="'+d.id+'" data-confirm="Appuie encore pour supprimer">'+ICON.trash+'Supprimer</button></div>';
+  return h;
+}
+function saveChore(){
+  const d=ui.ch,name=String(d.name||'').trim(),every=Math.round(Number(d.every));
+  if(!name){ui.cErr='Écris le nom de la tâche.';return false;}
+  if(!(every>=1&&every<=365)){ui.cErr='Choisis un nombre de jours entre 1 et 365.';return false;}
+  if(!d.next){ui.cErr='Choisis une date.';return false;}
+  ui.cErr='';
+  if(d.id){const c=S.chores.find(x=>x.id===d.id);if(c)Object.assign(c,{name,every,next:d.next});}
+  else S.chores.push({id:uid(),name,every,next:d.next,last:null});
+  save();return true;
+}
+
 /* ---------- Render: Today ---------- */
 function relRow(r){
   if(r.type==='task'){const t=r.x;
@@ -803,12 +865,13 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=
 window.addEventListener('appinstalled',()=>{installEvt=null;if(S)render();toast('Tête libre est installée sur ton téléphone.');});
 function renderToday(){
   const T=tISO(),tt=todayTasks(),rl=relances();
-  const n=tt.length+rl.length,late=tt.filter(t=>t.due<T).length;
+  const ch=choresDue();
+  const n=tt.length+rl.length+ch.length,late=tt.filter(t=>t.due<T).length+ch.filter(c=>c.next<T).length;
   let h=installEvt?'<div class="banner"><span>Mets Tête libre sur ton écran d\'accueil.</span><button type="button" data-act="install">Installer</button></div>':'';
   h+='<div class="summary"><span class="clock" id="clock">'+nowLabel()+'</span> · '+
     (n?n+' chose'+(n>1?'s':'')+' à faire aujourd\'hui'+(late?' dont <em>'+late+' en retard</em>':''):'Rien d\'obligatoire aujourd\'hui')+'</div>';
   h+=bdayCard();
-  h+=n?'<ul class="card">'+tt.map(t=>taskRow(t,{showList:true})).join('')+rl.map(relRow).join('')+'</ul>'
+  h+=n?'<ul class="card">'+tt.map(t=>taskRow(t,{showList:true})).join('')+ch.map(c=>choreRow(c,{hideWhen:true,showKind:true})).join('')+rl.map(relRow).join('')+'</ul>'
       :'';
   const sg=suggestions();
   if(sg.length){
@@ -838,6 +901,7 @@ function renderWeek(){
   for(let i=0;i<7;i++){
     const d=addDays(T,i);
     const tasks=S.tasks.filter(t=>t.status==='todo'&&t.due===d).sort(byDue);
+    const chs=(S.chores||[]).filter(c=>i===0?c.next<=d:c.next===d).sort(byNext);
     const waits=S.tasks.filter(t=>t.status==='waiting'&&t.followUp===d);
     const lines=[];
     S.money.forEach(m=>{
@@ -847,11 +911,12 @@ function renderWeek(){
     });
     if(d===nextPayday())lines.push({ic:ICON.euro,txt:'Paie',amt:'',id:null});
     (S.birthdays||[]).forEach(b=>{const y=parse(d).getFullYear();if(bdayOn(b,y)===d){const age=b.year?y-Number(b.year):null;lines.push({ic:ICON.cake,txt:'Anniversaire de '+b.name+(age!=null?' ('+age+' ans)':''),amt:'',id:null,go:'anniversaires'});}});
-    if(!tasks.length&&!waits.length&&!lines.length)continue;
+    if(!tasks.length&&!chs.length&&!waits.length&&!lines.length)continue;
     any=true;
     const label=i===0?"aujourd'hui":i===1?'demain':fWdNum.format(parse(d));
     h+='<section class="day'+(i===0?' is-today':'')+'"><h3>'+esc(label)+'</h3><ul class="card">'+
       tasks.map(t=>taskRow(t,{showList:true,hideDate:'all'})).join('')+
+      chs.map(c=>choreRow(c,{hideWhen:true,showKind:true})).join('')+
       waits.map(t=>'<li><button class="mrow" type="button" data-act="openTask" data-id="'+t.id+'"><span class="l"><b>Relancer '+esc(t.waitingFor||'')+'</b><small>'+esc(t.title)+'</small></span></button></li>').join('')+
       lines.map(l=>l.m?'<li class="mli" data-row="'+l.id+'">'+coinBtn(l.m)+'<button class="mline mrow" type="button" data-act="openMoney" data-id="'+l.id+'"><span class="k"><span>'+esc(l.txt)+'</span></span><span class="amt '+(l.cls||'')+'">'+l.amt+'</span></button></li>'
         :'<li><button class="mline mrow" type="button" '+(l.id?'data-act="openMoney" data-id="'+l.id+'"':'data-act="go" data-v="'+(l.go||'argent')+'"')+'><span class="k">'+l.ic+'<span>'+esc(l.txt)+'</span></span><span class="amt '+(l.cls||'')+'">'+l.amt+'</span></button></li>').join('')+
@@ -931,8 +996,8 @@ function renderMoney(){
 function render(){
   document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-current',VIEWS[b.dataset.view]===ui.view?'page':'false'));
   const m=$('#main');
-  $('#page-title').textContent=ui.view==='today'?cap(fLong.format(today())):ui.view==='tasks'?'Tâches':ui.view==='money'?'Argent':'Anniversaires';
-  m.innerHTML=ui.view==='today'?renderToday():ui.view==='tasks'?renderTasks():ui.view==='money'?renderMoney():renderBirthdays();
+  $('#page-title').textContent=ui.view==='today'?cap(fLong.format(today())):ui.view==='tasks'?'Tâches':ui.view==='chores'?'Tâches ménagères':ui.view==='money'?'Argent':'Anniversaires';
+  m.innerHTML=ui.view==='today'?renderToday():ui.view==='tasks'?renderTasks():ui.view==='chores'?renderChores():ui.view==='money'?renderMoney():renderBirthdays();
   if(ui.sheet&&ui.sheet.type==='week'&&sheet.open)renderSheet(true);
 }
 function openQuickAdd(){
@@ -957,7 +1022,7 @@ function openSheet(ctx){
   sheet.scrollTop=0;
 }
 function closeSheet(){if(sheet.open)sheet.close();}
-sheet.addEventListener('close',()=>{ui.tErr='';ui.bErr='';ui.bd=null;if(toastEl.parentNode===sheet){document.body.appendChild(toastEl);}ui.sheet=null;ui.draft=null;ui.mErr='';ui.add.last=null;render();});
+sheet.addEventListener('close',()=>{ui.tErr='';ui.bErr='';ui.bd=null;ui.cErr='';ui.ch=null;if(toastEl.parentNode===sheet){document.body.appendChild(toastEl);}ui.sheet=null;ui.draft=null;ui.mErr='';ui.add.last=null;render();});
 sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet();});
 function renderSheet(keepScroll){
   const y=sheet.scrollTop;
@@ -967,6 +1032,7 @@ function renderSheet(keepScroll){
   else if(c.type==='task'){const t=task(c.id);if(!t){closeSheet();return;}title='Tâche';body=taskSheet(t);}
   else if(c.type==='money'){title=c.isNew?'Nouvelle entrée':'Argent';body=moneySheet();}
   else if(c.type==='settings'){title='Réglages';body=settingsSheet();}
+  else if(c.type==='chore'){title=ui.ch&&ui.ch.id?'Tâche ménagère':'Nouvelle tâche ménagère';body=choreSheet();}
   else if(c.type==='bday'){title=ui.bd&&ui.bd.id?'Anniversaire':'Nouvel anniversaire';body=bdaySheet();}
   else if(c.type==='week'){title='Ma semaine';body='<div class="sec">'+renderWeek()+'</div>';}
   sheet.innerHTML='<span class="grab" aria-hidden="true"></span><div class="sh-head"><h2 id="sheet-title">'+title+'</h2><button class="icon-btn" type="button" data-act="closeSheet" aria-label="Fermer">'+ICON.close+'</button></div><div class="sh-body">'+body+'</div>';
@@ -1138,7 +1204,7 @@ function settingsSheet(){
     '<details><summary class="note" style="cursor:pointer">Restaurer depuis un texte copié (par exemple depuis l\'aperçu dans Claude)</summary>'+
     '<label for="bk-in" class="sr">Coller une sauvegarde</label><textarea id="bk-in" rows="3" placeholder="Colle ici la sauvegarde copiée"></textarea>'+
     '<button class="btn ghost" type="button" data-act="bkRestore">Restaurer ce texte</button></details><p class="note" id="bk-msg" hidden></p></div>';
-  h+='<hr class="sep"><div class="btns"><button class="btn danger" type="button" data-act="wipe" data-confirm="Sûr ? Appuie encore pour tout effacer">'+ICON.trash+'Tout effacer</button></div><p class="note">Tête libre · version 1.7</p>';
+  h+='<hr class="sep"><div class="btns"><button class="btn danger" type="button" data-act="wipe" data-confirm="Sûr ? Appuie encore pour tout effacer">'+ICON.trash+'Tout effacer</button></div><p class="note">Tête libre · version 1.8</p>';
   return h;
 }
 
@@ -1213,6 +1279,16 @@ document.addEventListener('click',e=>{
       break;}
     case 'moreSug':ui.sugOffset+=3;render();break;
     case 'openBday':openBdaySheet(id);break;
+    case 'openChore':openChoreSheet(id);break;
+    case 'cSet':{const i=$('#c-name');if(i)ui.ch.name=i.value;const nx=$('#c-next');if(nx)ui.ch.next=nx.value;ui.ch[k]=Number(v);renderSheet(true);break;}
+    case 'cSave':{const isNew=!ui.ch.id;if(saveChore()){closeSheet();render();toast(isNew?'Tâche ménagère ajoutée.':'Enregistré.');}else renderSheet(true);break;}
+    case 'cDel':{if(!armed(el))break;const c=S.chores.find(x=>x.id===id);if(!c)break;const copy=Object.assign({},c);S.chores=S.chores.filter(x=>x.id!==id);save();closeSheet();toast('Tâche ménagère supprimée.','Annuler',()=>{S.chores.push(copy);save();render();});break;}
+    case 'choreDone':{
+      const c=S.chores.find(x=>x.id===id);if(!c)break;
+      const prev={next:c.next,last:c.last};
+      c.last=T;c.next=addDays(T,Math.max(1,Number(c.every)||1));logDone(c.name);save();animThenRender(id);
+      toast('Fait ! Prochaine fois '+dot(relPrep(c.next)),'Annuler',()=>{Object.assign(c,prev);S.doneLog.pop();save();render();});
+      break;}
     case 'bSave':{const isNew=!ui.bd.id;if(saveBday()){closeSheet();render();toast(isNew?'Anniversaire ajouté.':'Enregistré.');}else renderSheet(true);break;}
     case 'bDel':{if(!armed(el))break;const b=S.birthdays.find(x=>x.id===id);if(!b)break;const copy=Object.assign({},b);S.birthdays=S.birthdays.filter(x=>x.id!==id);save();closeSheet();toast('Anniversaire supprimé.','Annuler',()=>{S.birthdays.push(copy);save();render();});break;}
     case 'gcalBday':{
@@ -1238,6 +1314,7 @@ document.addEventListener('click',e=>{
     case 'addMoney':ui.draft=newDraft(v);ui.mErr='';openSheet({type:'money',isNew:true});break;
     case 'openAdd':{
       if(ui.view==='birthdays'){openBdaySheet(null);break;}
+      if(ui.view==='chores'){openChoreSheet(null);break;}
       if(ui.view==='money'){ui.draft=newDraft('in');ui.add.kind='money';}else{ui.add.kind='task';}
       ui.add.prio='none';ui.add.list=(ui.view==='tasks'&&ui.filter!=='all')?ui.filter:null;ui.add.when='later';ui.add.title='';ui.add.last=null;ui.add.start='';ui.add.end='';ui.add.err='';ui.mErr='';
       if(!ui.draft)ui.draft=newDraft('in');
@@ -1329,6 +1406,7 @@ document.addEventListener('input',e=>{
   if(el.id==='a-title'){ui.add.title=el.value;return;}
   if(el.dataset.m&&ui.draft){ui.draft[el.dataset.m]=el.value;return;}
   if(el.dataset.b&&ui.bd){ui.bd[el.dataset.b]=el.value;return;}
+  if(el.dataset.c&&ui.ch){ui.ch[el.dataset.c]=el.value;return;}
   if(el.dataset.f&&ui.sheet&&ui.sheet.type==='task'){
     const t=task(ui.sheet.id);if(!t)return;const f=el.dataset.f;
     if(f==='title'){t.title=el.value;save();return;}
@@ -1341,6 +1419,7 @@ document.addEventListener('change',e=>{
   const el=e.target;
   if(el.id==='a-date'){ui.add.date=el.value;return;}
   if(el.dataset.b&&ui.bd){ui.bd[el.dataset.b]=el.value;return;}
+  if(el.dataset.c&&ui.ch){ui.ch[el.dataset.c]=el.value;if(el.dataset.c==='every')renderSheet(true);return;}
   if(el.dataset.m&&ui.draft){ui.draft[el.dataset.m]=el.value;return;}
   if(el.id==='bk-file'&&el.files&&el.files[0]){
     el.files[0].text().then(txt=>{try{restoreFrom(txt);}catch(err){const msg=$('#bk-msg');if(msg){msg.hidden=false;msg.textContent='Ce fichier n\'est pas une sauvegarde de Tête libre.';}}});
@@ -1421,7 +1500,8 @@ $('#fab').innerHTML=ICON.plus;
 $('#tab-today').innerHTML=ICON.sun+'<span>Aujourd\'hui</span>';
 $('#tab-tasks').innerHTML=ICON.list+'<span>Tâches</span>';
 $('#tab-money').innerHTML=ICON.euro+'<span>Argent</span>';
-$('#tab-bdays').innerHTML=ICON.cake+'<span>Anniversaires</span>';
+$('#tab-chores').innerHTML=ICON.house+'<span>Ménage</span>';
+$('#tab-bdays').innerHTML=ICON.cake+'<span>Anniv.</span>';$('#tab-bdays').setAttribute('aria-label','Anniversaires');
 (async()=>{
   S=norm(await load());
   S.lists.forEach(l=>{if(l.color==='#2C47D8')l.color=COLORS[0];else if(l.color==='#C23B6E')l.color='#7B5EA7';});
