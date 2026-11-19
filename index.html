@@ -294,6 +294,7 @@ input.big:focus{border-color:var(--accent-text);outline:none}
 .btn.danger{background:transparent;color:var(--late);border:1px solid color-mix(in srgb,var(--late) 30%,transparent)}
 .btn[data-armed="1"]{background:var(--late);color:var(--cream)}
 .btns{display:flex;flex-direction:column;gap:10px}
+.ablink{border:0;background:transparent;color:var(--accent-text);font-weight:700;font-size:14.5px;padding:6px 2px;align-self:flex-start}
 .gcal{display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:12px;background:var(--accent-soft);color:var(--accent-text);font-weight:700;text-decoration:none;font-size:16px}
 .gcal.off{background:var(--bg);color:var(--muted);font-weight:400;font-size:14.5px}
 .feedback{font-size:15px;color:var(--muted);display:flex;flex-direction:column;gap:10px}
@@ -609,6 +610,139 @@ function flush(){
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(flush,150);}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&saveTimer)flush();});
 window.addEventListener('pagehide',()=>{if(saveTimer)flush();});
+
+/* ---------- Sauvegarde automatique : un seul fichier, réécrit une fois par jour ----------
+   (à la première ouverture de la journée, ou à minuit si l'appli est restée ouverte).
+   File System Access API. Le fichier choisi est gardé (son "handle") dans IndexedDB.
+   On n'écrit jamais une appli vide par-dessus une sauvegarde, et si le fichier choisi
+   contient une sauvegarde plus complète que l'appli, on demande avant de l'écraser. */
+const AB={h:null,state:'off',at:null,name:'',t:null,busy:false,again:false,step:null,conflict:null,
+  can:typeof window.showOpenFilePicker==='function'};
+const AB_KEY='tetelibre.ab',AB_NAME='tete-libre-sauvegarde.json',AB_READ='tetelibre.ab.reading',AB_KO='tetelibre.ab.ko';
+const AB_TYPES=[{description:'Sauvegarde Tête libre',accept:{'application/json':['.json']}}];
+const nItems=d=>['tasks','money','birthdays','chores','shop'].reduce((n,k)=>n+(d&&Array.isArray(d[k])?d[k].length:0),0);
+const abWhen=ms=>{const d=new Date(ms),k=diff(iso(d),tISO());return (k===0?"aujourd'hui":k===1?'hier':'le '+fShort.format(d))+' à '+d.getHours()+'h'+pad(d.getMinutes());};
+const abLabel=()=>AB.at?'Dernière sauvegarde '+abWhen(AB.at)+'.':'Fichier « '+AB.name+' ».';
+function abSet(st){
+  const was=AB.state;AB.state=st;
+  try{localStorage.setItem(AB_KEY,JSON.stringify({at:AB.at,name:AB.name}));}catch(e){}
+  if(was!==st){if(S)render();if(ui.sheet&&ui.sheet.type==='settings'&&sheet.open)renderSheet(true);}
+  else{const el=document.getElementById('ab-st');if(el)el.textContent=abLabel();}
+}
+const abDue=()=>!AB.at||iso(new Date(AB.at))!==tISO();
+function abDaily(){if(AB.h&&!AB.conflict&&abDue())abWrite();}
+async function abWrite(){
+  clearTimeout(AB.t);AB.t=null;
+  if(!AB.h||AB.conflict||!nItems(S))return;
+  if(AB.busy){AB.again=true;return;}
+  AB.busy=true;
+  try{
+    if(await AB.h.queryPermission({mode:'readwrite'})!=='granted'){abSet('perm');return;}
+    const w=await AB.h.createWritable();
+    await w.write(JSON.stringify(S));
+    await w.close();
+    AB.at=Date.now();abSet('on');
+  }catch(e){abSet(e&&e.name==='NotFoundError'?'lost':e&&e.name==='NotAllowedError'?'perm':'err');}
+  finally{AB.busy=false;if(AB.again){AB.again=false;abWrite();}}
+}
+async function abInit(){
+  try{const m=JSON.parse(localStorage.getItem(AB_KEY)||'null');if(m){AB.at=m.at||null;AB.name=m.name||'';}}catch(e){}
+  try{if(localStorage.getItem(AB_KO))AB.can=false;}catch(e){}
+  if(!AB.can||!IDB.db)return;
+  /* Garde-fou : si relire le fichier mémorisé a fait planter l'appli la fois d'avant,
+     on oublie ce fichier et on désactive la sauvegarde auto au lieu de replanter. */
+  let crashed=false;try{crashed=!!localStorage.getItem(AB_READ);localStorage.setItem(AB_READ,'1');}catch(e){}
+  if(crashed){
+    try{localStorage.removeItem(AB_READ);localStorage.setItem(AB_KO,'1');}catch(e){}
+    AB.can=false;AB.name='';AB.at=null;IDB.set('bkHandle',null).catch(()=>{});
+    render();toast('Sauvegarde auto désactivée : elle fait planter l\'appli sur ce téléphone.');return;
+  }
+  let h=null;try{h=await IDB.get('bkHandle');}catch(e){}
+  try{localStorage.removeItem(AB_READ);}catch(e){}
+  if(!h)return;
+  try{
+    AB.h=h;AB.name=h.name||AB.name;
+    if(await h.queryPermission({mode:'readwrite'})==='granted'){AB.state='on';abDaily();}
+    else abSet('perm');
+  }catch(e){}
+}
+async function abEnsure(h){
+  let p='prompt';
+  try{p=await h.queryPermission({mode:'readwrite'});if(p!=='granted')p=await h.requestPermission({mode:'readwrite'});}catch(e){}
+  return p==='granted';
+}
+function abRefreshSheet(){if(ui.sheet&&ui.sheet.type==='settings'&&sheet.open)renderSheet(true);}
+async function abPick(mode){
+  let h;
+  try{
+    if(mode==='save')h=await window.showSaveFilePicker({suggestedName:AB_NAME,types:AB_TYPES,startIn:'documents'});
+    else [h]=await window.showOpenFilePicker({types:AB_TYPES,multiple:false});
+  }catch(e){
+    if(mode==='save'){AB.step='create';abRefreshSheet();}
+    if(!e||e.name!=='AbortError')toast(mode==='save'?'Crée d\'abord le fichier, puis choisis-le.':'Impossible d\'utiliser ce fichier.');
+    return;
+  }
+  const ok=await abEnsure(h);
+  let old=null;
+  try{const f=await h.getFile();if(f.size){const d=JSON.parse(await f.text());if(valid(d))old={d,n:nItems(d),at:f.lastModified};}}catch(e){}
+  AB.h=h;AB.name=h.name||AB_NAME;AB.at=null;AB.step=null;AB.conflict=null;
+  try{await IDB.set('bkHandle',h);}catch(e){}
+  if(old&&old.n>nItems(S)){AB.conflict=old;abSet('conflict');abRefreshSheet();return;}
+  if(!ok){abSet('perm');abRefreshSheet();toast('Autorisation refusée : la sauvegarde auto est en pause.');return;}
+  abSet('on');abRefreshSheet();
+  await abWrite();
+  toast(AB.state==='on'?'Sauvegarde automatique activée.':'La première sauvegarde a échoué. Réessaie.');
+}
+async function abGo(){
+  if(!AB.h)return;
+  if(!await abEnsure(AB.h)){abSet('perm');toast('Autorisation refusée : la sauvegarde auto reste en pause.');return;}
+  if(!nItems(S)){abSet('on');toast('Rien à sauvegarder pour l\'instant.');return;}
+  await abWrite();
+  toast(AB.state==='on'?'Sauvegarde à jour.':AB.state==='lost'?'Fichier introuvable : choisis-en un autre dans Réglages.':'La sauvegarde a échoué. Réessaie.');
+}
+async function abResolve(useOld){
+  const old=AB.conflict;if(!old||!AB.h)return;
+  const ok=await abEnsure(AB.h);
+  AB.conflict=null;abSet(ok?'on':'perm');
+  if(useOld)restoreFrom(JSON.stringify(old.d));
+  else if(ok){await abWrite();toast('Sauvegarde automatique activée.');}
+}
+function abOff(){
+  clearTimeout(AB.t);AB.t=null;AB.h=null;AB.conflict=null;AB.at=null;AB.step=null;AB.name='';
+  if(IDB.db)IDB.set('bkHandle',null).catch(()=>{});
+  abSet('off');
+}
+function abBanner(){
+  const m={perm:['Sauvegarde auto en pause.','Reprendre','abNow'],lost:['Fichier de sauvegarde introuvable.','Choisir','openSettings'],
+    err:['La sauvegarde auto a échoué.','Réessayer','abNow'],conflict:['Sauvegarde auto en attente.','Voir','openSettings']}[AB.state];
+  if(AB.state==='perm'&&!abDue())return '';
+  return m?'<div class="banner"><span>'+m[0]+'</span><button type="button" data-act="'+m[2]+'">'+m[1]+'</button></div>':'';
+}
+function abSection(){
+  let ko=false;try{ko=!!localStorage.getItem(AB_KO);}catch(e){}
+  if(ko)return '<p class="note">Sauvegarde automatique désactivée : elle a fait planter l\'appli sur ce téléphone.</p><button class="ablink" type="button" data-act="abRetry">Réessayer quand même</button>';
+  if(!AB.can)return '<p class="note">Sauvegarde automatique indisponible dans ce navigateur : ouvre Tête libre avec Chrome à jour.</p>';
+  if(AB.state==='conflict'&&AB.conflict){
+    const c=AB.conflict;
+    return '<p class="note">Ce fichier contient déjà une sauvegarde plus complète : '+c.n+' élément'+(c.n>1?'s':'')+', modifiée '+esc(abWhen(c.at))+'.</p>'+
+      '<button class="btn" type="button" data-act="abUseOld">Restaurer cette sauvegarde</button>'+
+      '<button class="btn ghost" type="button" data-act="abOverwrite" data-confirm="Appuie encore pour écraser">Écraser avec mes données actuelles</button>';
+  }
+  if(!AB.h){
+    let h='<button class="btn" type="button" data-act="abSetup">Activer la sauvegarde automatique</button>';
+    h+=AB.step==='create'
+      ?'<button class="btn ghost" type="button" data-act="abCreate">1. Créer le fichier</button><button class="btn ghost" type="button" data-act="abOpen">2. Choisir ce fichier</button>'
+      :'<button class="ablink" type="button" data-act="abStep">Le fichier ne se crée pas ?</button>';
+    return h;
+  }
+  const st={on:'',perm:'En pause : Chrome demande à nouveau l\'autorisation. ',lost:'Fichier introuvable (déplacé ou supprimé). ',err:'La dernière sauvegarde a échoué. '}[AB.state]||'';
+  let h='<p class="note">'+(st?'<b>'+esc(st)+'</b>':'Activée · une fois par jour, toujours dans le même fichier. ')+'<span id="ab-st">'+esc(abLabel())+'</span></p>';
+  if(AB.state==='lost')h+='<button class="btn" type="button" data-act="abSetup">Choisir un fichier</button>';
+  else h+='<button class="btn'+(AB.state==='on'?' ghost':'')+'" type="button" data-act="abNow">'+(AB.state==='perm'?'Reprendre la sauvegarde auto':AB.state==='err'?'Réessayer':'Sauvegarder maintenant')+'</button>';
+  if(AB.state!=='lost')h+='<button class="btn ghost" type="button" data-act="abSetup">Changer de fichier</button>';
+  h+='<button class="ablink" type="button" data-act="abOff">Désactiver la sauvegarde auto</button>';
+  return h;
+}
 const task=id=>S.tasks.find(t=>t.id===id);
 const listById=id=>S.lists.find(l=>l.id===id)||S.lists[0];
 
@@ -901,6 +1035,7 @@ function renderToday(){
   const ch=choresDue();
   const n=tt.length+rl.length+ch.length,late=tt.filter(t=>t.due<T).length+ch.filter(c=>c.next<T).length;
   let h=installEvt?'<div class="banner"><span>Mets Tête libre sur ton écran d\'accueil.</span><button type="button" data-act="install">Installer</button></div>':'';
+  h+=abBanner();
   h+='<div class="summary"><span class="clock" id="clock">'+nowLabel()+'</span> · '+
     (n?n+' chose'+(n>1?'s':'')+' à faire aujourd\'hui'+(late?' dont <em>'+late+' en retard</em>':''):'Rien d\'obligatoire aujourd\'hui')+'</div>';
   h+=bdayCard();
@@ -956,7 +1091,7 @@ function renderWeek(){
       '</ul></section>';
   }
   const lb=S.settings.lastBackup?diff(S.settings.lastBackup,T):null;
-  if((S.tasks.length+S.money.length)>=8&&(lb===null||lb>30))h+='<div class="banner"><span>Pas de sauvegarde '+(lb===null?'pour l\'instant':'depuis '+lb+' jours')+'.</span><button type="button" data-act="openSettings">Sauvegarder</button></div>';
+  if(AB.state!=='on'&&(S.tasks.length+S.money.length)>=8&&(lb===null||lb>30))h+='<div class="banner"><span>Pas de sauvegarde '+(lb===null?'pour l\'instant':'depuis '+lb+' jours')+'.</span><button type="button" data-act="openSettings">Sauvegarder</button></div>';
   const waitN=S.tasks.filter(t=>t.status==='waiting').length;
   if(waitN)h+='<p class="hint">'+waitN+' chose'+(waitN>1?'s':'')+' en attente de quelqu\'un. Elles reviendront le jour de la relance.</p>';
   return h;
@@ -1235,13 +1370,14 @@ function settingsSheet(){
     gcalLink({title:'Tête libre : ma journée',date:addDays(T,1),time:s.amTime||'08:00',dur:10,details:'Ouvre Tête libre pour voir ta journée.',recur:'RRULE:FREQ=DAILY'},'Créer le récap du jour')+
     gcalLink({title:'Tête libre : ma semaine',date:nextSun,time:s.sunTime||'18:00',dur:15,details:'Ouvre Tête libre, puis « Voir ma semaine » en bas de l\'accueil.',recur:'RRULE:FREQ=WEEKLY;BYDAY=SU'},'Créer le récap du dimanche')+'</div>';
   const lb=s.lastBackup?diff(s.lastBackup,T):null;
-  h+='<hr class="sep"><div class="fld"><span class="lab">Sauvegarde</span><p class="note">Tes données restent dans ce téléphone, dans l\'appli. Dernière sauvegarde : '+(lb===null?'jamais':lb===0?'aujourd\'hui':'il y a '+lb+' jour'+(lb>1?'s':''))+'. Une fois par mois, c\'est bien.</p>'+
-    '<button class="btn ghost" type="button" data-act="bkFile">Télécharger ma sauvegarde</button>'+
+  h+='<hr class="sep"><div class="fld"><span class="lab">Sauvegarde automatique</span>'+abSection()+'</div>';
+  h+='<hr class="sep"><div class="fld"><span class="lab">Sauvegarde manuelle</span>'+(AB.state==='on'?'':'<p class="note">Dernière sauvegarde téléchargée : '+(lb===null?'jamais':lb===0?'aujourd\'hui':'il y a '+lb+' jour'+(lb>1?'s':''))+'.</p>')+
+    '<button class="btn ghost" type="button" data-act="bkFile">Télécharger une copie</button>'+
     '<label class="btn ghost filebtn" for="bk-file">Restaurer depuis un fichier<input type="file" id="bk-file" accept=".json,application/json"></label>'+
     '<details><summary class="note" style="cursor:pointer">Restaurer depuis un texte copié (par exemple depuis l\'aperçu dans Claude)</summary>'+
     '<label for="bk-in" class="sr">Coller une sauvegarde</label><textarea id="bk-in" rows="3" placeholder="Colle ici la sauvegarde copiée"></textarea>'+
     '<button class="btn ghost" type="button" data-act="bkRestore">Restaurer ce texte</button></details><p class="note" id="bk-msg" hidden></p></div>';
-  h+='<hr class="sep"><div class="btns"><button class="btn danger" type="button" data-act="wipe" data-confirm="Sûr ? Appuie encore pour tout effacer">'+ICON.trash+'Tout effacer</button></div><p class="note">Tête libre · version 1.9</p>';
+  h+='<hr class="sep"><div class="btns"><button class="btn danger" type="button" data-act="wipe" data-confirm="Sûr ? Appuie encore pour tout effacer">'+ICON.trash+'Tout effacer</button></div><p class="note">Tête libre · version 1.10.1</p>';
   return h;
 }
 
@@ -1426,6 +1562,20 @@ document.addEventListener('click',e=>{
       document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
       S.settings.lastBackup=T;save();renderSheet(true);toast('Sauvegarde téléchargée dans tes fichiers.');
       break;}
+    case 'abSetup':abPick(window.showSaveFilePicker&&nItems(S)?'save':'open');break;
+    case 'abOpen':abPick('open');break;
+    case 'abStep':AB.step='create';renderSheet(true);break;
+    case 'abCreate':{
+      const blob=new Blob([JSON.stringify(S)],{type:'application/json'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=AB_NAME;
+      document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+      toast('Fichier créé dans Téléchargements. Choisis-le à l\'étape 2.');
+      break;}
+    case 'abNow':abGo();break;
+    case 'abRetry':try{localStorage.removeItem(AB_KO);}catch(err){}AB.can=typeof window.showOpenFilePicker==='function';renderSheet(true);break;
+    case 'abUseOld':abResolve(true);break;
+    case 'abOverwrite':if(!armed(el))break;abResolve(false);break;
+    case 'abOff':abOff();toast('Sauvegarde automatique désactivée.');break;
     case 'install':{
       if(!installEvt)break;installEvt.prompt();installEvt.userChoice.finally(()=>{installEvt=null;render();});
       break;}
@@ -1537,7 +1687,7 @@ async function refresh(force){
   const changed=await pullFromStore();
   const d=tISO();
   if(force||changed||d!==lastDay){
-    if(d!==lastDay){ui.sugOffset=0;ui.showSug=false;}
+    if(d!==lastDay){ui.sugOffset=0;ui.showSug=false;if(lastDay)setTimeout(abDaily,0);}
     lastDay=d;render();
     if(changed&&ui.sheet&&ui.sheet.type!=='add')renderSheet(true);
   }
@@ -1568,6 +1718,7 @@ $('#tab-bdays').innerHTML=ICON.cake+'<span>Anniv.</span>';$('#tab-bdays').setAtt
   scheduleTick();
   route();
   window.addEventListener('hashchange',route);
+  abInit();
   if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){
     const hadController=!!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange',()=>{
