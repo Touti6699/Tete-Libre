@@ -110,6 +110,11 @@ main > *{flex-shrink:0}
 .sq-chk .sq svg{width:15px;height:15px;stroke-width:3;opacity:0;color:var(--on-ok)}
 .checking .sq-chk .sq{background:var(--ok)}
 .checking .sq-chk .sq svg{opacity:1}
+.sq-chk.on .sq{background:var(--ok)}
+.sq-chk.on .sq svg{opacity:1}
+.segn{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--ink);font-size:12.5px;line-height:20px;font-variant-numeric:tabular-nums}
+.seg button[aria-pressed="true"] .segn{background:var(--accent-soft);color:var(--accent-text)}
+.shop-add input{background:var(--surface)}
 
 .seg{display:inline-flex;background:var(--line);border-radius:12px;padding:3px;gap:2px;align-self:flex-start}
 .seg button{border:0;background:transparent;border-radius:9px;padding:8px 16px;font-weight:700;font-size:15px;color:var(--muted);min-height:38px}
@@ -349,7 +354,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
   <div class="tabs-in">
     <button class="tab" type="button" data-view="aujourdhui" id="tab-today"></button>
     <button class="tab" type="button" data-view="taches" id="tab-tasks"></button>
-    <button class="tab" type="button" data-view="menage" id="tab-chores"></button>
+    <button class="tab" type="button" data-view="maison" id="tab-chores"></button>
     <button class="tab" type="button" data-view="argent" id="tab-money"></button>
     <button class="tab" type="button" data-view="anniversaires" id="tab-bdays"></button>
   </div>
@@ -556,12 +561,12 @@ function sample(){
     m({kind:'sub',label:'Forfait mobile',amount:9.99,day:3,freq:'month'}),
     m({kind:'sub',label:'Abonnement presse',amount:89,day:12,month:3,freq:'year'})
   ];
-  const birthdays=sampleBirthdays(),chores=sampleChores();
+  const birthdays=sampleBirthdays(),chores=sampleChores(),shop=sampleShop();
   const doneLog=[{d:addDays(T,-1),t:'Rendre le colis au point relais'},{d:addDays(T,-3),t:'Prendre RDV chez le coiffeur'},{d:addDays(T,-4),t:'Arroser les plantes'}];
-  return {v:1,lists,tasks,money,birthdays,chores,doneLog,settings:{payDay:28,weekendAdjust:true,amTime:'08:00',sunTime:'18:00',remTime:'09:00'},sample:true};
+  return {v:1,lists,tasks,money,birthdays,chores,shop,doneLog,settings:{payDay:28,weekendAdjust:true,amTime:'08:00',sunTime:'18:00',remTime:'09:00'},sample:true};
 }
 function blank(){
-  const b=sample();b.tasks=[];b.money=[];b.birthdays=[];b.chores=[];b.doneLog=[];b.sample=false;return b;
+  const b=sample();b.tasks=[];b.money=[];b.birthdays=[];b.chores=[];b.shop=[];b.doneLog=[];b.sample=false;return b;
 }
 function sampleBirthdays(){
   const T=tISO(),y=today().getFullYear();
@@ -569,11 +574,15 @@ function sampleBirthdays(){
   return [at(0,'Paul',30),at(3,'Maman',null),at(6,'Léa',27),at(41,'Julien',35),at(120,'Camille',null)];
 }
 const DEMO_PRIO={'Répondre au mail du propriétaire':'high',"Résilier l'abonnement salle de sport":'med',"Envoyer l'attestation employeur à la CAF":'high','Arroser les plantes':'low','Rendez-vous chez le dentiste':'med','Ranger les papiers dans le classeur':'low'};
+function sampleShop(){
+  const T=tISO(),i=(name,done)=>({id:uid(),name,done:!!done,doneAt:done?T:null,createdAt:T});
+  return [i('Lait'),i('Pain'),i('Tomates'),i('Pâtes'),i('Lessive'),i('Café',true)];
+}
 function sampleChores(){
   const T=tISO(),c=(name,every,k,last)=>({id:uid(),name,every,next:addDays(T,k),last:last==null?null:addDays(T,last)});
   return [c('Sortir les poubelles',2,-1,-3),c("Passer l'aspirateur",7,0,-7),c('Changer les draps',14,3,-11),c('Nettoyer la salle de bain',10,6,-4),c('Détartrer la bouilloire',30,20,-10)];
 }
-function norm(d){d.doneLog=d.doneLog||[];d.chores=Array.isArray(d.chores)?d.chores:(PREVIEW?sampleChores():[]);
+function norm(d){d.doneLog=d.doneLog||[];d.shop=Array.isArray(d.shop)?d.shop:(PREVIEW?sampleShop():[]);d.chores=Array.isArray(d.chores)?d.chores:(PREVIEW?sampleChores():[]);
   if(PREVIEW&&!d.tasks.some(t=>'prio' in t))d.tasks.forEach(t=>{t.prio=DEMO_PRIO[t.title]||null;});d.birthdays=Array.isArray(d.birthdays)?d.birthdays:(PREVIEW?sampleBirthdays():[]);return d;}
 const IDB={db:null,
   open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('tetelibre',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{IDB.db=r.result;res();};r.onerror=()=>rej(r.error);}catch(e){rej(e);}});},
@@ -681,8 +690,8 @@ function logDone(title){S.doneLog=S.doneLog||[];S.doneLog.push({d:tISO(),t:title
 const doneLast7=()=>{const from=addDays(tISO(),-6);return (S.doneLog||[]).filter(x=>x.d>=from).length;};
 
 /* ---------- UI state ---------- */
-const VIEWS={aujourdhui:'today',taches:'tasks',menage:'chores',argent:'money',anniversaires:'birthdays'};
-const ui={view:'today',filter:'all',showSettled:false,showSug:false,openSteps:new Set(),showDone:false,sugOffset:0,sheet:null,
+const VIEWS={aujourdhui:'today',taches:'tasks',maison:'chores',menage:'chores',argent:'money',anniversaires:'birthdays'};
+const ui={view:'today',filter:'all',showSettled:false,showSug:false,houseSeg:'chores',shopDraft:'',openSteps:new Set(),showDone:false,sugOffset:0,sheet:null,
   add:{kind:'task',title:'',list:null,when:'later',date:'',last:null},draft:null,mErr:''};
 
 /* ---------- Render: rows ---------- */
@@ -813,6 +822,30 @@ function choreRow(c,o){
   if(o.showKind)meta.push('<span class="lst">'+ICON.house+' Ménage</span>');
   return '<li class="row" data-row="'+c.id+'"><button class="sq-chk" type="button" data-act="choreDone" data-id="'+c.id+'" aria-label="Fait : '+esc(c.name)+'"><span class="sq">'+ICON.check+'</span></button>'+
     '<div class="row-main" data-act="openChore" data-id="'+c.id+'" role="button" tabindex="0"><div class="t-title">'+esc(c.name)+'</div><div class="t-meta">'+meta.join('')+'</div></div><div></div></li>';
+}
+function renderHouse(){
+  const seg=ui.houseSeg||'chores',due=choresDue().length,left=(S.shop||[]).filter(i=>!i.done).length;
+  const b=(v,label,n)=>'<button type="button" data-act="houseSeg" data-v="'+v+'" aria-pressed="'+(seg===v)+'">'+label+(n?' <span class="segn">'+n+'</span>':'')+'</button>';
+  return '<div class="seg full" role="group" aria-label="Partie">'+b('chores','Ménage',due)+b('shop','Liste de courses',left)+'</div>'+(seg==='shop'?renderShop():renderChores());
+}
+function shopRow(i){
+  return '<li class="row'+(i.done?' is-done':'')+'" data-row="'+i.id+'"><button class="sq-chk'+(i.done?' on':'')+'" type="button" data-act="shopToggle" data-id="'+i.id+'" aria-label="'+(i.done?'Remettre dans la liste':'Mettre dans le panier')+' : '+esc(i.name)+'"><span class="sq">'+ICON.check+'</span></button>'+
+    '<div class="row-main" data-act="shopEdit" data-id="'+i.id+'" role="button" tabindex="0"><div class="t-title">'+esc(i.name)+'</div></div><div></div></li>';
+}
+function renderShop(){
+  const items=S.shop||[],todo=items.filter(i=>!i.done),done=items.filter(i=>i.done);
+  let h='<div class="addline shop-add"><label for="s-item" class="sr">Ajouter un article</label><input type="text" id="s-item" placeholder="Ajouter un article" autocomplete="off" enterkeyhint="done" value="'+esc(ui.shopDraft||'')+'"><button type="button" data-act="shopAdd" aria-label="Ajouter l\'article">'+ICON.plus+'</button></div>';
+  if(todo.length)h+='<ul class="card">'+todo.map(shopRow).join('')+'</ul>';
+  if(done.length)h+='<section class="sec"><div class="sec-h"><h2>Dans le panier</h2><button class="link" type="button" data-act="shopClear">Retirer de la liste</button></div><ul class="card">'+done.map(shopRow).join('')+'</ul></section>';
+  return h;
+}
+function addShopItems(){
+  const i=$('#s-item');if(!i)return;
+  const names=i.value.split(/[,;\n]/).map(x=>x.trim()).filter(Boolean);
+  if(!names.length){i.focus();return;}
+  names.forEach(n=>S.shop.push({id:uid(),name:n,done:false,doneAt:null,createdAt:tISO()}));
+  ui.shopDraft='';save();render();
+  const ni=$('#s-item');if(ni)ni.focus();
 }
 function renderChores(){
   const T=tISO(),all=(S.chores||[]).slice().sort(byNext);
@@ -996,8 +1029,8 @@ function renderMoney(){
 function render(){
   document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-current',VIEWS[b.dataset.view]===ui.view?'page':'false'));
   const m=$('#main');
-  $('#page-title').textContent=ui.view==='today'?cap(fLong.format(today())):ui.view==='tasks'?'Tâches':ui.view==='chores'?'Tâches ménagères':ui.view==='money'?'Argent':'Anniversaires';
-  m.innerHTML=ui.view==='today'?renderToday():ui.view==='tasks'?renderTasks():ui.view==='chores'?renderChores():ui.view==='money'?renderMoney():renderBirthdays();
+  $('#page-title').textContent=ui.view==='today'?cap(fLong.format(today())):ui.view==='tasks'?'Tâches':ui.view==='chores'?'Maison':ui.view==='money'?'Argent':'Anniversaires';
+  m.innerHTML=ui.view==='today'?renderToday():ui.view==='tasks'?renderTasks():ui.view==='chores'?renderHouse():ui.view==='money'?renderMoney():renderBirthdays();
   if(ui.sheet&&ui.sheet.type==='week'&&sheet.open)renderSheet(true);
 }
 function openQuickAdd(){
@@ -1032,6 +1065,10 @@ function renderSheet(keepScroll){
   else if(c.type==='task'){const t=task(c.id);if(!t){closeSheet();return;}title='Tâche';body=taskSheet(t);}
   else if(c.type==='money'){title=c.isNew?'Nouvelle entrée':'Argent';body=moneySheet();}
   else if(c.type==='settings'){title='Réglages';body=settingsSheet();}
+  else if(c.type==='shopitem'){const it=S.shop.find(x=>x.id===c.id);if(!it){closeSheet();return;}title='Article';
+    body='<div class="fld"><label for="si-name">Article</label><input type="text" id="si-name" value="'+esc(it.name)+'" autocomplete="off"></div>'+
+      '<button class="btn" type="button" data-act="shopSave" data-id="'+it.id+'">'+ICON.check+'Enregistrer</button>'+
+      '<div class="btns"><button class="btn danger" type="button" data-act="shopDel" data-id="'+it.id+'" data-confirm="Appuie encore pour supprimer">'+ICON.trash+'Supprimer</button></div>';}
   else if(c.type==='chore'){title=ui.ch&&ui.ch.id?'Tâche ménagère':'Nouvelle tâche ménagère';body=choreSheet();}
   else if(c.type==='bday'){title=ui.bd&&ui.bd.id?'Anniversaire':'Nouvel anniversaire';body=bdaySheet();}
   else if(c.type==='week'){title='Ma semaine';body='<div class="sec">'+renderWeek()+'</div>';}
@@ -1204,7 +1241,7 @@ function settingsSheet(){
     '<details><summary class="note" style="cursor:pointer">Restaurer depuis un texte copié (par exemple depuis l\'aperçu dans Claude)</summary>'+
     '<label for="bk-in" class="sr">Coller une sauvegarde</label><textarea id="bk-in" rows="3" placeholder="Colle ici la sauvegarde copiée"></textarea>'+
     '<button class="btn ghost" type="button" data-act="bkRestore">Restaurer ce texte</button></details><p class="note" id="bk-msg" hidden></p></div>';
-  h+='<hr class="sep"><div class="btns"><button class="btn danger" type="button" data-act="wipe" data-confirm="Sûr ? Appuie encore pour tout effacer">'+ICON.trash+'Tout effacer</button></div><p class="note">Tête libre · version 1.8</p>';
+  h+='<hr class="sep"><div class="btns"><button class="btn danger" type="button" data-act="wipe" data-confirm="Sûr ? Appuie encore pour tout effacer">'+ICON.trash+'Tout effacer</button></div><p class="note">Tête libre · version 1.9</p>';
   return h;
 }
 
@@ -1280,6 +1317,22 @@ document.addEventListener('click',e=>{
     case 'moreSug':ui.sugOffset+=3;render();break;
     case 'openBday':openBdaySheet(id);break;
     case 'openChore':openChoreSheet(id);break;
+    case 'houseSeg':{const i=$('#s-item');if(i)ui.shopDraft=i.value;ui.houseSeg=v;render();break;}
+    case 'shopAdd':addShopItems();break;
+    case 'shopToggle':{
+      const it=S.shop.find(x=>x.id===id);if(!it)break;
+      const i=$('#s-item');if(i)ui.shopDraft=i.value;
+      if(it.done){it.done=false;it.doneAt=null;save();render();}
+      else{it.done=true;it.doneAt=tISO();save();animThenRender(id);}
+      break;}
+    case 'shopClear':{
+      const gone=S.shop.filter(x=>x.done);if(!gone.length)break;
+      S.shop=S.shop.filter(x=>!x.done);save();render();
+      toast(gone.length+' article'+(gone.length>1?'s retirés':' retiré')+' de la liste.','Annuler',()=>{S.shop=S.shop.concat(gone);save();render();});
+      break;}
+    case 'shopEdit':openSheet({type:'shopitem',id});break;
+    case 'shopSave':{const it=S.shop.find(x=>x.id===id);const v2=($('#si-name')||{}).value;if(it&&v2&&v2.trim()){it.name=v2.trim();save();}closeSheet();break;}
+    case 'shopDel':{if(!armed(el))break;const it=S.shop.find(x=>x.id===id);if(!it)break;const pos=S.shop.indexOf(it);S.shop=S.shop.filter(x=>x.id!==id);save();closeSheet();toast('Article supprimé.','Annuler',()=>{S.shop.splice(pos,0,it);save();render();});break;}
     case 'cSet':{const i=$('#c-name');if(i)ui.ch.name=i.value;const nx=$('#c-next');if(nx)ui.ch.next=nx.value;ui.ch[k]=Number(v);renderSheet(true);break;}
     case 'cSave':{const isNew=!ui.ch.id;if(saveChore()){closeSheet();render();toast(isNew?'Tâche ménagère ajoutée.':'Enregistré.');}else renderSheet(true);break;}
     case 'cDel':{if(!armed(el))break;const c=S.chores.find(x=>x.id===id);if(!c)break;const copy=Object.assign({},c);S.chores=S.chores.filter(x=>x.id!==id);save();closeSheet();toast('Tâche ménagère supprimée.','Annuler',()=>{S.chores.push(copy);save();render();});break;}
@@ -1314,7 +1367,10 @@ document.addEventListener('click',e=>{
     case 'addMoney':ui.draft=newDraft(v);ui.mErr='';openSheet({type:'money',isNew:true});break;
     case 'openAdd':{
       if(ui.view==='birthdays'){openBdaySheet(null);break;}
-      if(ui.view==='chores'){openChoreSheet(null);break;}
+      if(ui.view==='chores'){
+        if(ui.houseSeg==='shop'){const i=$('#s-item');if(i){i.focus();i.scrollIntoView({block:'center'});}}
+        else openChoreSheet(null);
+        break;}
       if(ui.view==='money'){ui.draft=newDraft('in');ui.add.kind='money';}else{ui.add.kind='task';}
       ui.add.prio='none';ui.add.list=(ui.view==='tasks'&&ui.filter!=='all')?ui.filter:null;ui.add.when='later';ui.add.title='';ui.add.last=null;ui.add.start='';ui.add.end='';ui.add.err='';ui.mErr='';
       if(!ui.draft)ui.draft=newDraft('in');
@@ -1398,6 +1454,8 @@ document.addEventListener('keydown',e=>{
     if(e.target.id==='a-title'){e.preventDefault();doAdd();return;}
     if(e.target.id==='e-step'){e.preventDefault();addStep();return;}
     if(e.target.id==='l-new'){e.preventDefault();addList();return;}
+    if(e.target.id==='s-item'){e.preventDefault();addShopItems();return;}
+    if(e.target.id==='si-name'){e.preventDefault();const b=document.querySelector('[data-act="shopSave"]');if(b)b.click();return;}
     if(e.target.matches&&e.target.matches('.row-main[role="button"]')){e.preventDefault();e.target.click();}
   }
 });
@@ -1407,6 +1465,7 @@ document.addEventListener('input',e=>{
   if(el.dataset.m&&ui.draft){ui.draft[el.dataset.m]=el.value;return;}
   if(el.dataset.b&&ui.bd){ui.bd[el.dataset.b]=el.value;return;}
   if(el.dataset.c&&ui.ch){ui.ch[el.dataset.c]=el.value;return;}
+  if(el.id==='s-item'){ui.shopDraft=el.value;return;}
   if(el.dataset.f&&ui.sheet&&ui.sheet.type==='task'){
     const t=task(ui.sheet.id);if(!t)return;const f=el.dataset.f;
     if(f==='title'){t.title=el.value;save();return;}
@@ -1500,7 +1559,7 @@ $('#fab').innerHTML=ICON.plus;
 $('#tab-today').innerHTML=ICON.sun+'<span>Aujourd\'hui</span>';
 $('#tab-tasks').innerHTML=ICON.list+'<span>Tâches</span>';
 $('#tab-money').innerHTML=ICON.euro+'<span>Argent</span>';
-$('#tab-chores').innerHTML=ICON.house+'<span>Ménage</span>';
+$('#tab-chores').innerHTML=ICON.house+'<span>Maison</span>';
 $('#tab-bdays').innerHTML=ICON.cake+'<span>Anniv.</span>';$('#tab-bdays').setAttribute('aria-label','Anniversaires');
 (async()=>{
   S=norm(await load());
